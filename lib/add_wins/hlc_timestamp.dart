@@ -6,11 +6,11 @@ class HlcTimestamp implements Comparable<HlcTimestamp> {
 
   factory HlcTimestamp.now() {
     final now = DateTime.now().toUtc();
-    if (!_nodeLogicalCounters.containsKey(now)) {
-      _nodeLogicalCounters[now] = 0;
+    if (_currentLogicalCounter == null || _currentLogicalCounter!.physicalTime.isBefore(now)) {
+      _currentLogicalCounter = (physicalTime: now, logicalCounter: 0);
     }
-    final logical = _nodeLogicalCounters[now]!;
-    _nodeLogicalCounters[now] = logical + 1;
+    final logical = _currentLogicalCounter!.logicalCounter;
+    _currentLogicalCounter = (physicalTime: now, logicalCounter: logical + 1);
     return HlcTimestamp._(now, logical);
   }
 
@@ -29,7 +29,7 @@ class HlcTimestamp implements Comparable<HlcTimestamp> {
     return logicalCounter.compareTo(other.logicalCounter);
   }
 
-  static final Map<DateTime, int> _nodeLogicalCounters = {};
+  static ({DateTime physicalTime, int logicalCounter})? _currentLogicalCounter;
 
   @override
   String toString() => '${physicalTime.millisecondsSinceEpoch}:$logicalCounter';
