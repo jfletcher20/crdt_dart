@@ -12,7 +12,6 @@ class AWORSetCRDT<T> {
     if (existing == null || existing.timestamp.compareTo(ts) < 0) {
       _adds[key] = _Record(data, ts);
     }
-    print("addState: $_adds :: $_removes");
   }
 
   void remove(String key, [HlcTimestamp? timestamp]) {
@@ -21,11 +20,9 @@ class AWORSetCRDT<T> {
     if (existing == null || existing.compareTo(ts) < 0) {
       _removes[key] = ts;
     }
-    print("removeState: $_adds :: $_removes");
   }
 
   T? find(String key) {
-    print("findState: $_adds :: $_removes");
     if (!_adds.containsKey(key)) return null;
 
     final addTs = _adds[key]!.timestamp;
@@ -37,8 +34,8 @@ class AWORSetCRDT<T> {
     return null;
   }
 
-  void merge(AWORSetCRDT<T> other) {
-    print("mergeState[1]: $_adds :: $_removes");
+  /// Merges [other] into [this]
+  AWORSetCRDT<T> merge(AWORSetCRDT<T> other) {
     for (var key in other._adds.keys) {
       final otherRecord = other._adds[key]!;
       if (!_adds.containsKey(key) || _adds[key]!.timestamp.compareTo(otherRecord.timestamp) < 0) {
@@ -46,14 +43,23 @@ class AWORSetCRDT<T> {
       }
     }
 
-    print("mergeState[2]: $_adds :: $_removes");
     for (var key in other._removes.keys) {
       final otherRemoveTs = other._removes[key]!;
       if (!_removes.containsKey(key) || _removes[key]!.compareTo(otherRemoveTs) < 0) {
         _removes[key] = otherRemoveTs;
       }
     }
-    print("mergeState[3]: $_adds :: $_removes");
+    return this;
+  }
+
+  /// Synchronizes [other] with [this]
+  AWORSetCRDT<T> sync(AWORSetCRDT<T> other) {
+    return merge(other.merge(this));
+  }
+
+  /// Synchronizes [other] with [this]
+  Future<AWORSetCRDT<T>> async(AWORSetCRDT<T> other) async {
+    return Future.delayed(Duration(seconds: 1), () => sync(other));
   }
 
   Map<String, T> get currentState {
